@@ -79,6 +79,7 @@ module Pong_Top
 	
 	screen_sel s(.screen(select_screen),
 					.draw(screen_en),
+					.resetn(resetn),
 					.but_0(KEY[0]),
 					.but_1(KEY[1]),
 					.clk(CLOCK_50));
@@ -116,7 +117,7 @@ endmodule
 // Selects the screen to go to
 // TODO: Get out of game state
 // screen: 00 -> Title, 01 -> Instructions, 10 -> Game
-module screen_sel(screen, draw, but_0, but_1, clk);
+module screen_sel(screen, resetn, draw, but_0, but_1, clk);
 	output reg [1:0] screen;	// The screen to go to
 	output draw;				// The draw enable bit
 	input but_0;				// Key 0
@@ -124,6 +125,16 @@ module screen_sel(screen, draw, but_0, but_1, clk);
 	input clk;
 	
 	reg [2:0] curr_state, next_state;
+	
+	wire clock_1;
+	
+	rate_counter delay(
+		.clk(clk),
+		.resetn(resetn),
+		.delay(40'd833333),
+		
+		.d_enable(clock_1)
+	);
 	
 	// States
 	localparam  TITLE 			= 3'b000,	// The title state
@@ -163,9 +174,13 @@ module screen_sel(screen, draw, but_0, but_1, clk);
 	end
 	
 	// Update state
-	always @(posedge clk) begin
-		curr_state <= next_state
-	end
+	always@(posedge clock_1)
+		begin: state_FFs
+        if(!resetn)
+            current_state <= TITLE;
+        else
+            current_state <= next_state;
+		end // state_FFS
 endmodule
 
 //EXPAND this for actual game
