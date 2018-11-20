@@ -98,7 +98,7 @@ module Pong_Top
 				 .scr_y(scr_dy),
 				 .opening(opening),
 				 .instr(instr_occur),
-				 .screen_en(screen_en),
+				 .screen_en(screen_engi),
 				 .x(x),
 				 .y(y),
 				 .writeEn(writeEn),
