@@ -67,18 +67,30 @@ module Pong_Top
 
 	// Put your code here. Your code should produce signals x,y,colour and writeEn/plot
 	// for the VGA controller, in addition to any other functionality your design may require.
-	wire opening; // if at beginning
-	wire instr_occur; // if at instruction
-	wire delay_enable; //for delay counter when drawing (yet to be implemented)
+	reg opening; // if at beginning
+	reg instr_occur; // if at instruction
 	
 	wire [9:0] scr_dx, scr_dy;
 	wire [2:0] scr_col;
 	
 	wire screen_en;
-	reg [1:0] select_screen;
+	wire [1:0] select_screen;
+	always @(*)begin
+		if(select_screen == 2'd0) begin
+			opening = 1'd1;
+			instr_occur = 1'd0;
+		end
+		else if(select_screen == 2'd1)begin
+			opening = 1'd0;
+			instr_occur = 1'd1;
+		end
+		else begin
+			opening = 1'd0;
+			instr_occur = 1'd0;
+		end
+	end
 	
 	screen_sel s(.screen(select_screen),
-					.draw(screen_en),
 					.resetn(resetn),
 					.but_0(KEY[0]),
 					.but_1(KEY[1]),
@@ -86,9 +98,8 @@ module Pong_Top
 	
 	scr_memory screen(.resetn(resetn),
 							.clk(CLOCK_50),
-							.frame(delay_enable),
 							.enable(opening | instr_occur),
-							.screen_select(select_screen),
+							.select_screen(select_screen),
 							.draw_state(screen_en),
 							.x(scr_dx), 
 							.y(scr_dy),
@@ -99,7 +110,8 @@ module Pong_Top
 				 .scr_y(scr_dy),
 				 .opening(opening),
 				 .instr(instr_occur),
-				 .screen_en(screen_engi),
+				 .screen_en(screen_en),
+				 .screen_colour(scr_col),
 				 .x(x),
 				 .y(y),
 				 .writeEn(writeEn),
@@ -117,9 +129,9 @@ endmodule
 // Selects the screen to go to
 // TODO: Get out of game state
 // screen: 00 -> Title, 01 -> Instructions, 10 -> Game
-module screen_sel(screen, resetn, draw, but_0, but_1, clk);
+module screen_sel(screen, resetn, but_0, but_1, clk);
 	output reg [1:0] screen;	// The screen to go to
-	output draw;				// The draw enable bit
+	input resetn;
 	input but_0;				// Key 0
 	input but_1;				// Key 1
 	input clk;
@@ -151,35 +163,34 @@ module screen_sel(screen, resetn, draw, but_0, but_1, clk);
 			INSTRUCT: 		next_state = but_0 ? TITLE_WAIT : INSTRUCT;
 			TITLE_WAIT:		next_state = but_0 ? TITLE_WAIT : TITLE;
 			TITLE:			next_state = but_1 ? GAME_WAIT : TITLE;
-			GAME_WAIT		next_state = but_1 ? GAME_WAIT : GAME;
+			GAME_WAIT:		next_state = but_1 ? GAME_WAIT : GAME;
 		default: 			next_state = TITLE;
+		endcase
 	end
 	
 	// State logic
 	always @(*) begin
-		screen <= 2'b00	// Default Title screen
-		draw = 1'b0		// Default draw disable
+		screen <= 2'b00;	// Default Title screen
 		case(curr_state)
 			TITLE: begin
-				draw = 1'b1;
+				screen <= 2'b00;
 			end
 			INSTRUCT: begin
 				screen <= 2'b01;
-				draw = 1'b1;
 			end
 			GAME: begin
 				screen <= 2'b10;
-				draw = 1'b1;
 			end
+		endcase
 	end
 	
 	// Update state
 	always@(posedge clock_1)
 		begin: state_FFs
         if(!resetn)
-            current_state <= TITLE;
+            curr_state <= TITLE;
         else
-            current_state <= next_state;
+            curr_state <= next_state;
 		end // state_FFS
 endmodule
 
