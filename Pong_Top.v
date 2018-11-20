@@ -73,15 +73,15 @@ module Pong_Top
 	
 	wire [9:0] scr_dx, scr_dy;
 	wire [2:0] scr_col;
-	wire screen_en;
 	
+	wire screen_en;
 	reg [1:0] select_screen;
-	always @(*) begin
-		if (opening)
-			select_screen = 2'd0;
-		else if (instr_occur)
-			select_screen = 2'd1;
-	end
+	
+	screen_sel s(.screen(select_screen),
+					.draw(screen_en),
+					.but_0(KEY[0]),
+					.but_1(KEY[1]),
+					.clk(CLOCK_50));
 	
 	scr_memory screen(.resetn(resetn),
 							.clk(CLOCK_50),
@@ -111,6 +111,61 @@ module Pong_Top
     // Instansiate FSM control
     // control c0(...);
 
+endmodule
+
+// Selects the screen to go to
+// TODO: Get out of game state
+// screen: 00 -> Title, 01 -> Instructions, 10 -> Game
+module screen_sel(screen, draw, but_0, but_1, clk);
+	output reg [1:0] screen;	// The screen to go to
+	output draw;				// The draw enable bit
+	input but_0;				// Key 0
+	input but_1;				// Key 1
+	input clk;
+	
+	reg [2:0] curr_state, next_state;
+	
+	// States
+	localparam  TITLE 			= 3'b000,	// The title state
+				INSTRUCT_WAIT 	= 3'b001,	// Going to instructions
+				INSTRUCT 		= 3'b011,	// The instruction state
+				TITLE_WAIT	 	= 3'b111,	// Going to the title
+				GAME_WAIT 		= 3'b110,	// Going to the game
+				GAME 			= 3'b100;	// The game state
+				
+	always @(*) begin
+		case(curr_state)
+			TITLE:			next_state = but_0 ? INSTRUCT_WAIT : TITLE;
+			INSTRUCT_WAIT: 	next_state = but_0 ? INSTRUCT_WAIT : INSTRUCT;
+			INSTRUCT: 		next_state = but_0 ? TITLE_WAIT : INSTRUCT;
+			TITLE_WAIT:		next_state = but_0 ? TITLE_WAIT : TITLE;
+			TITLE:			next_state = but_1 ? GAME_WAIT : TITLE;
+			GAME_WAIT		next_state = but_1 ? GAME_WAIT : GAME;
+		default: 			next_state = TITLE;
+	end
+	
+	// State logic
+	always @(*) begin
+		screen <= 2'b00	// Default Title screen
+		draw = 1'b0		// Default draw disable
+		case(curr_state)
+			TITLE: begin
+				draw = 1'b1;
+			end
+			INSTRUCT: begin
+				screen <= 2'b01;
+				draw = 1'b1;
+			end
+			GAME: begin
+				screen <= 2'b10;
+				draw = 1'b1;
+			end
+	end
+	
+	// Update state
+	always @(posedge clk) begin
+		curr_state <= next_state
+	end
 endmodule
 
 //EXPAND this for actual game
