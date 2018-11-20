@@ -4,7 +4,6 @@
 module scr_memory(
 						input resetn,
 						input clk,
-						input frame,
 						input enable,
 						input [1:0] select_screen,
 						output draw_state,
@@ -18,7 +17,6 @@ module scr_memory(
 	draw_mem dm(.go(enable),
 					.resetn(resetn),
 					.clk(clk),
-					.frame(frame),
 					.draw_state(draw_state),
 					.address(address),
 					.x(x),
@@ -55,7 +53,6 @@ endmodule
 module draw_mem(input go,
 					 input resetn,
 					 input clk,
-					 input frame,
 					 output reg draw_state,
 					 output reg [14:0] address,
 					 output reg [9:0] x,
@@ -77,7 +74,7 @@ module draw_mem(input go,
 				address_counter <= address_counter + 15'd1;
 			end
 		end
-		else if (go & frame)
+		else if (go)
 			draw_state <= 1'd1;
 	end
 	
