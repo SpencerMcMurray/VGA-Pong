@@ -1,5 +1,6 @@
-//`include "Title.v"
-//`include "Instructions.v"
+`include "Title.v"
+`include "Instructions.v"
+`include "GameScreen.v"
 
 module scr_memory(
 						input resetn,
@@ -11,23 +12,23 @@ module scr_memory(
 						output reg [2:0] colour
 						);
 						
-	wire [2:0] title_c, instr_c;
-	wire [14:0]address;
+	wire [2:0] title_c, instr_c, game_c;
+	wire [14:0] address;
 	
 	draw_mem dm(.go(enable),
-					.resetn(resetn),
-					.clk(clk),
-					.draw_state(draw_state),
-					.address(address),
-					.x(x),
-					.y(y)
+					 .resetn(resetn),
+					 .clk(clk),
+					 .draw_state(draw_state),
+					 .address(address),
+					 .x(x),
+					 .y(y)
 					);
 	
 	Title title(.address(address),
-					.clock(clk),
-					.data(),
-					.wren(1'd0),
-					.q(title_c)
+					 .clock(clk),
+					 .data(),
+					 .wren(1'd0),
+					 .q(title_c)
 					);
 	
 	Instructions instr(.address(address),
@@ -37,6 +38,13 @@ module scr_memory(
 							 .q(instr_c)
 							);
 							
+	GameScreen gs(.address(address),
+					 .clock(clk),
+					 .data(),
+					 .wren(1'd0),
+					 .q(game_c)
+					);
+	
 	always @(posedge clk) begin
 		if (!resetn)
 			colour <= title_c;
@@ -44,6 +52,7 @@ module scr_memory(
 			case(select_screen)
 				2'd0: colour <= title_c;
 				2'd1: colour <= instr_c;
+				2'd2: colour <= game_c;
 			endcase
 		end
 	end

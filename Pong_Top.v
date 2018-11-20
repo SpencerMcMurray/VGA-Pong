@@ -1,4 +1,5 @@
 // Part 2 skeleton
+`include "Game.v"
 
 module Pong_Top
 	(
@@ -75,20 +76,6 @@ module Pong_Top
 	
 	wire screen_en;
 	wire [1:0] select_screen;
-	always @(*)begin
-		if(select_screen == 2'd0) begin
-			opening = 1'd1;
-			instr_occur = 1'd0;
-		end
-		else if(select_screen == 2'd1)begin
-			opening = 1'd0;
-			instr_occur = 1'd1;
-		end
-		else begin
-			opening = 1'd0;
-			instr_occur = 1'd0;
-		end
-	end
 	
 	screen_sel s(.screen(select_screen),
 					.resetn(resetn),
@@ -108,10 +95,11 @@ module Pong_Top
 							
 	draw_mux (.scr_x(scr_dx),
 				 .scr_y(scr_dy),
-				 .opening(opening),
-				 .instr(instr_occur),
+				 .screen(select_screen),
 				 .screen_en(screen_en),
 				 .screen_colour(scr_col),
+				 .clk(CLOCK_50),
+				 .reset(resetn),
 				 .x(x),
 				 .y(y),
 				 .writeEn(writeEn),
@@ -144,7 +132,6 @@ module screen_sel(screen, resetn, but_0, but_1, clk);
 		.clk(clk),
 		.resetn(resetn),
 		.delay(40'd833333),
-		
 		.d_enable(clock_1)
 	);
 	
@@ -197,21 +184,31 @@ endmodule
 //EXPAND this for actual game
 module draw_mux(input [9:0] scr_x, 
 					 input [9:0] scr_y,
-					 input opening,
-					 input instr,
+					 input screen,
 					 input screen_colour,
 					 input screen_en,
+					 input clk,
+					 input reset,
 					 output reg [9:0] x, y,
 					 output reg [2:0] colour,
 					 output reg writeEn
 					 );
+	wire [1:0] game_draw_state;
+	Game game(.draw_state(game_draw_state),
+				.clk(clk),
+				.reset(reset));
+	
 	always @(*)begin
-		if (opening | instr) begin
+		if (screen == 2'b00 | screen == 2'b01) begin
 			x = scr_x;
 			y = scr_y;
 			colour = screen_colour;
 			writeEn = screen_en;
 		end
-	// else game here
+		else begin // We're in the game
+			case(game_draw_state)
+				// TODO: deal with drawn states
+			endcase
+		end
 	end
 endmodule
