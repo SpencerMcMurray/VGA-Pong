@@ -194,10 +194,13 @@ module draw_mux(input [9:0] scr_x,
 					 output reg writeEn
 					 );
 	wire [1:0] game_draw_state;
-	Game game(.draw_state(game_draw_state),
+	wire done;
+	Game game(.done(done),
+				.draw_state(game_draw_state),
 				.clk(clk),
 				.reset(reset));
 	
+	// Have on posedge clk?
 	always @(*)begin
 		if (screen == 2'b00 | screen == 2'b01) begin
 			x = scr_x;
@@ -206,9 +209,123 @@ module draw_mux(input [9:0] scr_x,
 			writeEn = screen_en;
 		end
 		else begin // We're in the game
-			case(game_draw_state)
-				// TODO: deal with drawn states
-			endcase
+			if(~reset) begin
+				x <= 10'd0;
+				y <= 10'd0;
+				colour <= 3'd0;
+				writeEn <= 1'd0;
+			end
+			if(done) begin // Move the objects around
+			end
+			else begin	// Create the ball and paddles
+				case(game_draw_state)
+					2'b00: begin // Fill with black
+						colour <= 3'b000;
+						writeEn = 1'b1;
+						if(x == 10'd159) begin
+							x <= 10'd0;
+						end
+						else begin
+							x <= x + 1;
+						end
+						if(y == 10d'119) begin
+							y <= 10'd0;
+						end
+						else begin
+							y <= y + 1;
+						end
+					end
+					2'b01: begin // Draw left paddle
+						colour <= 3'b000;
+						writeEn = 1'b1;
+						if(x == 10'd159) begin
+							x <= 10'd0;
+						end
+						// If x is hugging the left side of the screen
+						else if(x < 4) begin
+							// If we're within radius 5 from the middle
+							if(y < ((120 / 2) + 5) && y > ((120 / 2) - 5)) begin
+								// Draw left paddle
+								colour <= 3'b111;
+							end
+						end
+						else begin
+							x <= x + 1;
+						end
+						if(y == 10d'119) begin
+							y <= 10'd0;
+						end
+						else begin
+							y <= y + 1;
+						end
+					end
+					2'b11: begin// Draw right paddle
+						colour <= 3'b000;
+						writeEn = 1'b1;
+						if(x == 10'd159) begin
+							x <= 10'd0;
+						end
+						// If x is hugging the right side of the screen
+						else if(x > (160 - 4)) begin
+							// If we're within radius 5 from the middle
+							if(y < ((120 / 2) + 5) && y > ((120 / 2) - 5)) begin
+								// Draw right paddle
+								colour <= 3'b111;
+							end
+						end
+						else begin
+							x <= x + 1;
+						end
+						if(y == 10d'119) begin
+							y <= 10'd0;
+						end
+						else begin
+							y <= y + 1;
+						end
+					end
+					2'b10: begin // Draw ball
+						colour <= 3'b000;
+						writeEn = 1'b1;
+						if(x == 10'd159) begin
+							x <= 10'd0;
+						end
+						// TODO make a ~random x and y value, place ball there
+						// If x is within 4 from the middle
+						else if(x < ((160 / 2) + 2) && x > ((160 / 2) - 2)) begin
+							// If we're within radius 5 from the middle
+							if(y < ((120 / 2) + 2) && y > ((120 / 2) - 2)) begin
+								// Draw ball
+								colour <= 3'b111;
+							end
+						end
+						else begin
+							x <= x + 1;
+						end
+						if(y == 10d'119) begin
+							y <= 10'd0;
+						end
+						else begin
+							y <= y + 1;
+						end
+					end
+				default: begin // Fill with black
+					colour <= 3'b000;
+					writeEn = 1'b1;
+					if(x == 10'd159) begin
+						x <= 10'd0;
+					end
+					else begin
+						x <= x + 1
+					end
+					if(y == 10d'119) begin
+						y <= 10'd0;
+					end
+					else begin
+						y <= y + 1
+					end
+				end
+				endcase
+			end
 		end
 	end
 endmodule

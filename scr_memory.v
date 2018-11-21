@@ -1,6 +1,5 @@
 `include "Title.v"
 `include "Instructions.v"
-`include "GameScreen.v"
 
 module scr_memory(
 						input resetn,
@@ -12,7 +11,7 @@ module scr_memory(
 						output reg [2:0] colour
 						);
 						
-	wire [2:0] title_c, instr_c, game_c;
+	wire [2:0] title_c, instr_c;
 	wire [14:0] address;
 	
 	draw_mem dm(.go(enable),
@@ -37,13 +36,6 @@ module scr_memory(
 							 .wren(1'd0),
 							 .q(instr_c)
 							);
-							
-	GameScreen gs(.address(address),
-					 .clock(clk),
-					 .data(),
-					 .wren(1'd0),
-					 .q(game_c)
-					);
 	
 	always @(posedge clk) begin
 		if (!resetn)
@@ -52,7 +44,6 @@ module scr_memory(
 			case(select_screen)
 				2'd0: colour <= title_c;
 				2'd1: colour <= instr_c;
-				2'd2: colour <= game_c;
 			endcase
 		end
 	end
