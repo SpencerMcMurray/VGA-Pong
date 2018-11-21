@@ -151,6 +151,7 @@ module screen_sel(screen, resetn, but_0, but_1, clk);
 			TITLE_WAIT:		next_state = but_0 ? TITLE_WAIT : TITLE;
 			TITLE:			next_state = but_1 ? GAME_WAIT : TITLE;
 			GAME_WAIT:		next_state = but_1 ? GAME_WAIT : GAME;
+			GAME:			next_state = GAME;
 		default: 			next_state = TITLE;
 		endcase
 	end
@@ -215,7 +216,7 @@ module draw_mux(input [9:0] scr_x,
 				colour <= 3'd0;
 				writeEn <= 1'd0;
 			end
-			if(done) begin // Move the objects around
+			else if(done) begin // Move the objects around
 			end
 			else begin	// Create the ball and paddles
 				case(game_draw_state)
@@ -228,7 +229,7 @@ module draw_mux(input [9:0] scr_x,
 						else begin
 							x <= x + 1;
 						end
-						if(y == 10d'119) begin
+						if(y == 10'd119) begin
 							y <= 10'd0;
 						end
 						else begin
@@ -252,7 +253,7 @@ module draw_mux(input [9:0] scr_x,
 						else begin
 							x <= x + 1;
 						end
-						if(y == 10d'119) begin
+						if(y == 10'd119) begin
 							y <= 10'd0;
 						end
 						else begin
@@ -261,7 +262,7 @@ module draw_mux(input [9:0] scr_x,
 					end
 					2'b11: begin// Draw right paddle
 						colour <= 3'b000;
-						writeEn = 1'b1;
+						writeEn <= 1'b1;
 						if(x == 10'd159) begin
 							x <= 10'd0;
 						end
@@ -276,7 +277,7 @@ module draw_mux(input [9:0] scr_x,
 						else begin
 							x <= x + 1;
 						end
-						if(y == 10d'119) begin
+						if(y == 10'd119) begin
 							y <= 10'd0;
 						end
 						else begin
@@ -285,7 +286,7 @@ module draw_mux(input [9:0] scr_x,
 					end
 					2'b10: begin // Draw ball
 						colour <= 3'b000;
-						writeEn = 1'b1;
+						writeEn <= 1'b1;
 						if(x == 10'd159) begin
 							x <= 10'd0;
 						end
@@ -301,27 +302,27 @@ module draw_mux(input [9:0] scr_x,
 						else begin
 							x <= x + 1;
 						end
-						if(y == 10d'119) begin
+						if(y == 10'd119) begin
 							y <= 10'd0;
 						end
 						else begin
 							y <= y + 1;
 						end
 					end
-				default: begin // Fill with black
+				default begin // Fill with black
 					colour <= 3'b000;
-					writeEn = 1'b1;
+					writeEn <= 1'b1;
 					if(x == 10'd159) begin
 						x <= 10'd0;
 					end
 					else begin
-						x <= x + 1
+						x <= x + 1;
 					end
-					if(y == 10d'119) begin
+					if(y == 10'd119) begin
 						y <= 10'd0;
 					end
 					else begin
-						y <= y + 1
+						y <= y + 1;
 					end
 				end
 				endcase

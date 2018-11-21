@@ -1,15 +1,15 @@
 module Game(done, draw_state, clk, reset);
 	input clk;
-	input reset;				// Set high to start, low to reset
-	output [1:0] draw_state;	// 00 => Draw black, 01 => Draw left, 11 => Draw right, 10 => Draw ball
-	output done;
+	input reset;					// Set high to start, low to reset
+	output reg [1:0] draw_state;	// 00 => Draw black, 01 => Draw left, 11 => Draw right, 10 => Draw ball
+	output reg done;
 	
 	reg [1:0] curr_state, next_state;
 	wire [19:0] delay;
 	reg [19:0] count;
 	reg [19:0] pause;
-	wire count_en;
-	wire count_reset;
+	reg count_en;
+	reg count_reset;
 	wire pause_clk;
 	
 	assign pause_clk = count == delay;
@@ -28,7 +28,7 @@ module Game(done, draw_state, clk, reset);
 				.reset(count_reset),
 				.clk(clk));
 				
-	counter pause(.count(pause),
+	counter pause1(.count(pause),
 					.enable(count_en),
 					.reset(count_en),
 					.clk(pause_clk));
@@ -38,14 +38,14 @@ module Game(done, draw_state, clk, reset);
 	always @(*) begin
 		case(curr_state)
 			START:			next_state = reset ? LOAD_1 : START;
-			LOAD_1			next_state = DRAW_L_PADDLE;
+			LOAD_1:			next_state = DRAW_L_PADDLE;
 			DRAW_L_PADDLE: 	next_state = (count == delay) ? LOAD_2 : DRAW_L_PADDLE;
 			LOAD_2:			next_state = DRAW_R_PADDLE;
 			DRAW_R_PADDLE:	next_state = (count == delay) ? LOAD_3 : DRAW_R_PADDLE;
-			LOAD_3			next_state = DRAW_BALL;
+			LOAD_3:			next_state = DRAW_BALL;
 			DRAW_BALL:		next_state = (pause == 10000) ? DONE : DRAW_BALL;
-			DONE			next_state = reset ? START : DONE
-			default:		next_state = START;
+			DONE:			next_state = reset ? START : DONE;
+			default			next_state = START;
 		endcase
 	end
 	
@@ -85,7 +85,7 @@ module Game(done, draw_state, clk, reset);
 		endcase
 	end
 	
-	always @(posedge clk negedge reset) begin
+	always @(posedge clk, negedge reset) begin
 		if(~reset) begin
 			curr_state <= START;
 		end
@@ -100,7 +100,7 @@ module counter(count, enable, reset, clk);
 	input enable, reset, clk;
 	output reg [19:0] count;
 	
-	always @(posedge clk negedge reset) begin
+	always @(posedge clk, negedge reset) begin
 		if(~reset) begin
 			count <= 20'd0;
 		end
