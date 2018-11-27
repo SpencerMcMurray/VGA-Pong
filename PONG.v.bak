@@ -1,0 +1,155 @@
+`include "vga_adapter/vga_adapter.v"
+`include "vga_adapter/vga_address_translator.v"
+`include "vga_adapter/vga_controller.v"
+`include "vga_adapter/vga_pll.v"
+
+`include "PS2MouseKeyboard/PS2_Keyboard_Controller.v"
+`include "PS2MouseKeyboard/Altera_UP_PS2_Command_Out.v"
+`include "PS2MouseKeyboard/Altera_UP_PS2_Data_In.v"
+`include "PS2MouseKeyboard/PS2_Controller.v"
+
+
+module pong_top(
+					CLOCK_50,						//	On Board 50 MHz
+					KEY,
+					LEDR,
+					HEX0,
+					HEX5,
+					
+					// The ports below are for the VGA output.  Do not change.
+					VGA_CLK,   						//	VGA Clock
+					VGA_HS,							//	VGA H_SYNC
+					VGA_VS,							//	VGA V_SYNC
+					VGA_BLANK_N,						//	VGA BLANK
+					VGA_SYNC_N,						//	VGA SYNC
+					VGA_R,   						//	VGA Red[9:0]
+					VGA_G,	 						//	VGA Green[9:0]
+					VGA_B,   						//	VGA Blue[9:0]
+					
+					// Keyboard inputs
+					PS2_CLK,
+					PS2_DAT
+					);
+					
+	input			CLOCK_50;				//	50 MHz
+	input [3:0]		KEY;
+	inout PS2_CLK;
+	inout PS2_DAT;
+	
+	output [9:0] 	LEDR;
+
+	// Declare your inputs and outputs here
+	// Do not change the following outputs
+	output			VGA_CLK;   				//	VGA Clock
+	output			VGA_HS;					//	VGA H_SYNC
+	output			VGA_VS;					//	VGA V_SYNC
+	output			VGA_BLANK_N;				//	VGA BLANK
+	output			VGA_SYNC_N;				//	VGA SYNC
+	output	[9:0]	VGA_R;   				//	VGA Red[9:0]
+	output	[9:0]	VGA_G;	 				//	VGA Green[9:0]
+	output	[9:0]	VGA_B;   				//	VGA Blue[9:0]
+	
+	output [6:0] HEX0;
+	output [6:0] HEX5;
+	
+	// Create the colour, x, y and writeEn wires that are inputs to the controller.
+	wire [2:0] colour;
+	wire [8:0] x;
+	wire [7:0] y;
+	wire writeEn;
+
+	// Create an Instance of a VGA controller - there can be only one!
+	// Define the number of colours as well as the initial background
+	// image file (.MIF) for the controller.
+	vga_adapter VGA(
+			.resetn(resetn),
+			.clock(CLOCK_50),
+			.colour(colour),
+			.x(x),
+			.y(y),
+			.plot(writeEn),
+			/* Signals for the DAC to drive the monitor. */
+			.VGA_R(VGA_R),
+			.VGA_G(VGA_G),
+			.VGA_B(VGA_B),
+			.VGA_HS(VGA_HS),
+			.VGA_VS(VGA_VS),
+			.VGA_BLANK(VGA_BLANK_N),
+			.VGA_SYNC(VGA_SYNC_N),
+			.VGA_CLK(VGA_CLK));
+		defparam VGA.RESOLUTION = "160x120";
+		defparam VGA.MONOCHROME = "FALSE";
+		defparam VGA.BITS_PER_COLOUR_CHANNEL = 1;
+		defparam VGA.BACKGROUND_IMAGE = "black.mif";
+		
+	wire keyboard_up;
+	wire keyboard_down;
+	wire keyboard_w;
+	wire keyboard_s;
+	wire keyboard_enter;
+		
+endmodule
+
+module ai_player(input clk,
+					  input resetn,	
+					  input [8:0] ball_x,
+					  input [7:0] ball_y,
+					  input [8:0] speed_x,
+					  input [7:0] speed_y,
+					  input ball_down,
+					  input ball_right,
+					  input [7:0] paddle_y,
+					  output reg ai_up,
+					  output reg ai_down
+					  );
+	reg [8:0] y_distance;
+	reg [8:0] y_target;
+	always @(*) begin
+		ai_up = 0;
+		ai_down = 0;
+		y_distance = (160-ball_x-4) * (speed_y/speed_x);
+		
+		if (ball_right && ball_x >= 100) begin
+			if (ball_down) begin // update targeted y coordinate if ball going down
+				y_target <= ball_y  + y_distance > 120 ? 240 - ball_y-y_distance : ball_y+y_distance;
+			end
+			else begin //if ball going up
+				y_target <= $signed(ball_y - y_distance) < $signed(0) ? y_dist - ball_y: ball_y - y_distance;
+			end
+		end
+		
+		if (y_target - 4 <= paddle_y) begin // lift ai if targeted y coord is lower than the paddle's
+			ai_up <= 1'b1;
+		end
+		else if (y_target + 8 >= paddle_y + 16) begin // lower ai if targeted y coord is higher than the paddle's
+			ai_down <= 1'b1;
+		end
+	end
+endmodule
+
+
+module hex_decoder(hex_digit, segments);
+    input [3:0] hex_digit;
+    output reg [6:0] segments;
+
+    always @(*)
+        case (hex_digit)
+            4'h0: segments = 7'b100_0000;
+            4'h1: segments = 7'b111_1001;
+            4'h2: segments = 7'b010_0100;
+            4'h3: segments = 7'b011_0000;
+            4'h4: segments = 7'b001_1001;
+            4'h5: segments = 7'b001_0010;
+            4'h6: segments = 7'b000_0010;
+            4'h7: segments = 7'b111_1000;
+            4'h8: segments = 7'b000_0000;
+            4'h9: segments = 7'b001_1000;
+            4'hA: segments = 7'b000_1000;
+            4'hB: segments = 7'b000_0011;
+            4'hC: segments = 7'b100_0110;
+            4'hD: segments = 7'b010_0001;
+            4'hE: segments = 7'b000_0110;
+            4'hF: segments = 7'b000_1110;
+            default: segments = 7'h7f;
+        endcase
+endmodule
