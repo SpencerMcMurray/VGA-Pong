@@ -10,6 +10,8 @@
 
 `include "control.v"
 `include "datapath.v"
+`include "ai_player.v"
+`include "hex_decoder.v"
 
 module PONG(
 				CLOCK_50,						//	On Board 50 MHz
@@ -37,6 +39,9 @@ module PONG(
 	input [3:0]		KEY;
 	inout PS2_CLK;
 	inout PS2_DAT;
+	
+	wire resetn;
+	assign resetn = KEY[0];
 	
 	output [9:0] 	LEDR;
 
@@ -103,7 +108,6 @@ module PONG(
 	wire control_set_up_ball;
 	wire control_draw_ball;
 	wire control_reset_delta;
-	wire menu;
 	
 	// Wires for drawing
 	wire move_pads;
@@ -129,7 +133,6 @@ module PONG(
 	wire ai_toggle;
 
 	// Scores
-	wire gameover;
 	wire [3:0] left_score;
 	wire [3:0] right_score;
 	
@@ -208,17 +211,30 @@ module PONG(
 		.menu(menu),
 		.move_pads(control_move_pads),
 		.move_ball(control_move_ball),
-		.set_up_clear_screen(control_set_up_clear_screen),
+		.load_clear_screen(control_set_up_clear_screen),
 		.clear_screen(control_clear_screen),
-		.set_up_left_pad(control_set_up_left_pad),
+		.load_left_pad(control_set_up_left_pad),
 		.draw_left_pad(control_draw_left_pad),
-		.set_up_right_pad(control_set_up_right_pad),
+		.load_right_pad(control_set_up_right_pad),
 		.draw_right_pad(control_draw_right_pad),
-		.set_up_ball(control_set_up_ball),
+		.load_ball(control_set_up_ball),
 		.draw_ball(control_draw_ball),
 		.reset_delta(control_reset_delta),
 		.plot(writeEn));
 	
+	//controls Ai Paddle
+	ai_player ai(
+		.clk(CLOCK_50),
+		.resetn(resetn),
+		.ball_x(ball_x),
+		.ball_y(ball_y),
+		.speed_x(speed_x),
+		.speed_y(speed_y),
+		.ball_down(ball_down),
+		.ball_right(ball_right),
+		.paddle_y(paddle_y),
+		.ai_up(ai_up),
+		.ai_down(ai_down));
 	
 	// HEX displays to show scores
 	hex_decoder H0(
@@ -229,68 +245,9 @@ module PONG(
         .hex_digit(left_score),
         .segments(HEX5)
         );
-endmodule
-
-module ai_player(input clk,
-					  input resetn,	
-					  input [8:0] ball_x,
-					  input [7:0] ball_y,
-					  input [8:0] speed_x,
-					  input [7:0] speed_y,
-					  input ball_down,
-					  input ball_right,
-					  input [7:0] paddle_y,
-					  output reg ai_up,
-					  output reg ai_down
-					  );
-	reg [8:0] y_distance;
-	reg [8:0] y_target;
-	always @(*) begin
-		ai_up = 0;
-		ai_down = 0;
-		y_distance = (160-ball_x-4) * (speed_y/speed_x);
-		
-		if (ball_right && ball_x >= 100) begin
-			if (ball_down) begin // update targeted y coordinate if ball going down
-				y_target <= ball_y  + y_distance > 120 ? 240 - ball_y-y_distance : ball_y+y_distance;
-			end
-			else begin //if ball going up
-				y_target <= $signed(ball_y - y_distance) < $signed(0) ? y_distance - ball_y: ball_y - y_distance;
-			end
-		end
-		
-		if (y_target - 4 <= paddle_y) begin // lift ai if targeted y coord is lower than the paddle's
-			ai_up <= 1'b1;
-		end
-		else if (y_target + 8 >= paddle_y + 16) begin // lower ai if targeted y coord is higher than the paddle's
-			ai_down <= 1'b1;
-		end
-	end
-endmodule
-
-
-module hex_decoder(hex_digit, segments);
-    input [3:0] hex_digit;
-    output reg [6:0] segments;
-
-    always @(*)
-        case (hex_digit)
-            4'h0: segments = 7'b100_0000;
-            4'h1: segments = 7'b111_1001;
-            4'h2: segments = 7'b010_0100;
-            4'h3: segments = 7'b011_0000;
-            4'h4: segments = 7'b001_1001;
-            4'h5: segments = 7'b001_0010;
-            4'h6: segments = 7'b000_0010;
-            4'h7: segments = 7'b111_1000;
-            4'h8: segments = 7'b000_0000;
-            4'h9: segments = 7'b001_1000;
-            4'hA: segments = 7'b000_1000;
-            4'hB: segments = 7'b000_0011;
-            4'hC: segments = 7'b100_0110;
-            4'hD: segments = 7'b010_0001;
-            4'hE: segments = 7'b000_0110;
-            4'hF: segments = 7'b000_1110;
-            default: segments = 7'h7f;
-        endcase
+		  
+	//Indicators for AI
+	assign LEDR[9] = ai_up;
+	assign LEDR[8] = ai_down;
+	assign LEDR[7] = ai_enable;
 endmodule
