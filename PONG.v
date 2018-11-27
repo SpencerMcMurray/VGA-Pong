@@ -8,6 +8,8 @@
 `include "PS2MouseKeyboard/Altera_UP_PS2_Data_In.v"
 `include "PS2MouseKeyboard/PS2_Controller.v"
 
+`include "control.v"
+`include "datapath.v"
 
 module PONG(
 				CLOCK_50,						//	On Board 50 MHz
@@ -88,7 +90,20 @@ module PONG(
 	wire keyboard_w;
 	wire keyboard_s;
 	wire keyboard_enter;
-	wire keyboard_space;
+	
+	// Control wires
+	wire control_move_pads;
+	wire control_move_ball;
+	wire control_set_up_clear_screen;
+	wire control_clear_screen;
+	wire control_set_up_left_pad;
+	wire control_draw_left_pad;
+	wire control_set_up_right_pad;
+	wire control_draw_right_pad;
+	wire control_set_up_ball;
+	wire control_draw_ball;
+	wire control_reset_delta;
+	wire menu;
 	
 	// Wires for drawing
 	wire move_pads;
@@ -107,16 +122,27 @@ module PONG(
 	wire menu;
 	wire gameover;
 	
-	// Wires controlling ai paddle
+	// Wires controlling AI paddle
 	reg ai_enable;
 	wire ai_up;
 	wire ai_down;
+	wire ai_toggle;
 
 	// Scores
+	wire gameover;
 	wire [3:0] left_score;
 	wire [3:0] right_score;
 	
-	//Keyboard adapter
+	// Movement wires
+	wire [8:0] ball_x;
+	wire [7:0] ball_y;
+	wire [8:0] speed_x;
+	wire [7:0] speed_y;
+	wire ball_down;
+	wire ball_right;
+	wire [7:0] paddle_y;
+	
+	// Keyboard adapter
 	keyboard_tracker #(.PULSE_OR_HOLD(0)) keyboard (
 		.clock(CLOCK_50),
 		.reset(resetn),
@@ -126,11 +152,11 @@ module PONG(
 		.down(keyboard_down),
 		.w(keyboard_w),
 		.s(keyboard_s),
-		.space(keyboard_space),
+		.space(ai_toggle),
 		.enter(keyboard_enter));
 		
-	//Spacebar toggles if ai is enabled or not
-	always @(posedge keyboard_space, negedge resetn) begin
+	// Spacebar toggles if ai is enabled or not
+	always @(posedge ai_toggle, negedge resetn) begin
 		if(!resetn)
 			ai_enable = 0;
 		else 
@@ -138,9 +164,60 @@ module PONG(
 	end
 	
 	
-	//datapath
+	// Call the datapath
+	datapath d0(
+		.clk(CLOCK_50), 
+		.resetn(resetn), 
+		.move_left_up(keyboard_w),
+		.move_left_down(keyboard_s),
+		.move_right_up((!ai_enable & keyboard_up) | (ai_enable & ai_up)), // Mux to choose ai or keyboard input
+		.move_right_down((!ai_enable & keyboard_down) | (ai_enable & ai_down)), // Mux to choose ai or keyboard input
+		.set_up_clear_screen(control_set_up_clear_screen),
+		.clear_screen(control_clear_screen),
+		.move_pads(control_move_pads),
+		.move_ball(control_move_ball),
+		.set_up_left_pad(control_set_up_left_pad),
+		.draw_left_pad(control_draw_left_pad),
+		.set_up_right_pad(control_draw_right_pad),
+		.draw_right_pad(control_draw_right_pad),
+		.set_up_ball(control_set_up_ball),
+		.draw_ball(control_draw_ball),
+		.reset_delta(control_reset_delta),
+		.menu(menu),
+		.x(x),
+		.y(y),
+		.colour(colour),
+		.ball_x(ball_x),
+		.ball_y(ball_y),
+		.speed_x(speed_x),
+		.speed_y(speed_y),
+		.ball_down(ball_down),
+		.ball_right(ball_right),
+		.right_pad_y(paddle_y),
+		.gameover(gameover),
+		.left_score(left_score),
+		.right_score(right_score)
+		);
 	
-	//controller
+	// Call the controller
+	control c0(
+		.clk(CLOCK_50), 
+		.resetn(resetn),
+		.enter(keyboard_enter),
+		.gameover(gameover),
+		.menu(menu),
+		.move_pads(control_move_pads),
+		.move_ball(control_move_ball),
+		.set_up_clear_screen(control_set_up_clear_screen),
+		.clear_screen(control_clear_screen),
+		.set_up_left_pad(control_set_up_left_pad),
+		.draw_left_pad(control_draw_left_pad),
+		.set_up_right_pad(control_set_up_right_pad),
+		.draw_right_pad(control_draw_right_pad),
+		.set_up_ball(control_set_up_ball),
+		.draw_ball(control_draw_ball),
+		.reset_delta(control_reset_delta),
+		.plot(writeEn));
 	
 	
 	// HEX displays to show scores
@@ -152,11 +229,6 @@ module PONG(
         .hex_digit(left_score),
         .segments(HEX5)
         );
-	
-	//Indicator if ai working
-	assign LEDR[2] = ai_up;
-	assign LEDR[1] = ai_down;
-	assign LEDR[0] = ai_enable;
 endmodule
 
 module ai_player(input clk,
