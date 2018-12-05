@@ -1,6 +1,7 @@
 module datapath(
 	input clk,
 	input resetn,
+	input [12:0] random, 
 	
 	// From keyboard
 	input move_left_up, 
