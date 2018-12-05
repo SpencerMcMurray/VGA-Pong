@@ -1,0 +1,3 @@
+Warning (10268): Verilog HDL information at pong.v(309): always construct contains both blocking and non-blocking assignments File: D:/New folder/Pong-master/pong.v Line: 309
+Warning (10268): Verilog HDL information at pong.v(460): always construct contains both blocking and non-blocking assignments File: D:/New folder/Pong-master/pong.v Line: 460
+Warning (10268): Verilog HDL information at pong.v(681): always construct contains both blocking and non-blocking assignments File: D:/New folder/Pong-master/pong.v Line: 681

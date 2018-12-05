@@ -1,0 +1,20 @@
+Fitter Status : Successful - Tue Nov 27 01:22:37 2018
+Quartus Prime Version : 18.0.0 Build 614 04/24/2018 SJ Lite Edition
+Revision Name : pong
+Top-level Entity Name : pong
+Family : Cyclone V
+Device : 5CGXFC7C7F23C8
+Timing Models : Final
+Logic utilization (in ALMs) : 448 / 56,480 ( < 1 % )
+Total registers : 276
+Total pins : 66 / 268 ( 25 % )
+Total virtual pins : 0
+Total block memory bits : 57,600 / 7,024,640 ( < 1 % )
+Total RAM Blocks : 8 / 686 ( 1 % )
+Total DSP Blocks : 1 / 156 ( < 1 % )
+Total HSSI RX PCSs : 0 / 6 ( 0 % )
+Total HSSI PMA RX Deserializers : 0 / 6 ( 0 % )
+Total HSSI TX PCSs : 0 / 6 ( 0 % )
+Total HSSI PMA TX Serializers : 0 / 6 ( 0 % )
+Total PLLs : 1 / 13 ( 8 % )
+Total DLLs : 0 / 4 ( 0 % )
