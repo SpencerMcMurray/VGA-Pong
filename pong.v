@@ -265,6 +265,88 @@ module pong
     
 endmodule
 
+module rate_divider(input clk,
+			input reset,
+			output rate_clk);
+
+	reg [24:0] count;
+	always @(posedge clk, negedge reset) begin
+		if(!reset) begin
+			count <= 0;
+		end else begin
+			count <= count + 1;
+			if (count == 50000000) begin
+				count <= 0;
+				rate_clk = 1'b1;
+			end
+		end
+	end
+endmodule
+
+module ai_player(input clk,
+			input resetn,
+			input [8:0] ball_x,
+			input [7:0] ball_y,
+			input [8:0] speed_x,
+			input [7:0] speed_y,
+			input ball_down,
+			input ball_right,
+			input [7:0] paddle_y,
+			output reg ai_up,
+			output reg ai_down
+			);
+	
+	// Get a rate divided clk to slow down our random error
+	wire rate_clk;
+	rate_divider divide(.clk(clk),
+			.reset(resetn),
+			.rate_clk(rate_clk));
+	
+	// Make a random number that updates every second
+	wire [12:0] random;
+	LFSR lfsr(.clock(rate_clk),
+				.reset(resetn),
+				.rnd(random));
+	
+	reg [8:0] y_distance;
+	reg [8:0] y_target;
+	always @(*) begin
+		ai_up = 0;
+		ai_down = 0;
+		y_distance = (160-ball_x-4) * (speed_y/speed_x);
+		
+		if (ball_right && ball_x >= 100) begin
+			// Update the target y if the ball is going down
+			if (ball_down) begin
+				y_target <= ball_y  + y_distance > 120 ? 240 - ball_y-y_distance : ball_y+y_distance;
+			end
+			// Update the target y if the ball is going up
+			else begin
+				y_target <= $signed(ball_y - y_distance) < 0 ? y_distance - ball_y: ball_y - y_distance;
+			end
+		end
+		// If the target y is lower than the paddle, tell the paddle to go up
+		if (y_target - 4 <= paddle_y) begin
+			// 25% error chance
+			if (random[1:0] == 2'b11) begin
+				ai_down <= 1'b1;
+			end else begin
+				ai_up <= 1'b1;
+			end
+		end
+		// If the target y is higher than the paddle, tell the paddle to go down
+		else if (y_target + 8 >= paddle_y + 16) begin
+			// 25% error chance
+			if (random[1:0] == 2'b11) begin
+				ai_up <= 1'b1;
+			end else begin
+				ai_down <= 1'b1;
+			end
+		end
+	end
+	
+endmodule
+
 module control(
 	input clk,
 	input resetn,
@@ -707,36 +789,36 @@ module LFSR (
     output [12:0] rnd 
     );
  
-wire feedback = random[12] ^ random[3] ^ random[2] ^ random[0]; 
- 
-reg [12:0] random, random_next, random_done;
-reg [3:0] count, count_next; // Keep track of the number of shifts
- 
-always @ (posedge clock or posedge reset) begin
-	if (reset) begin
-		random <= 13'hF; // An LFSR cannot have an all 0 state, thus reset to FF
-		count <= 0;
+	wire feedback = random[12] ^ random[3] ^ random[2] ^ random[0]; 
+	 
+	reg [12:0] random, random_next, random_done;
+	reg [3:0] count, count_next; // Keep track of the number of shifts
+	 
+	always @ (posedge clock or posedge reset) begin
+		if (reset) begin
+			random <= 13'hF; // An LFSR cannot have an all 0 state, thus reset to FF
+			count <= 0;
+		end
+		else begin
+			random <= random_next;
+			count <= count_next;
+		end
 	end
-	else begin
-		random <= random_next;
-		count <= count_next;
+	 
+	always @ (*) begin
+		random_next = random; //default state stays the same
+		count_next = count;
+
+		random_next = {random[11:0], feedback}; //shift left the xor'd every posedge clock
+		count_next = count + 1;
+
+		if (count == 13) begin
+			count = 0;
+			random_done = random; //assign the random number to output after 13 shifts
+		end
 	end
-end
- 
-always @ (*) begin
-	random_next = random; //default state stays the same
-	count_next = count;
 
-	random_next = {random[11:0], feedback}; //shift left the xor'd every posedge clock
-	count_next = count + 1;
-
-	if (count == 13) begin
-		count = 0;
-		random_done = random; //assign the random number to output after 13 shifts
-	end
-end
-
-assign rnd = random_done;
+	assign rnd = random_done;
 endmodule
 
 module hex_decoder(hex_digit, segments);
