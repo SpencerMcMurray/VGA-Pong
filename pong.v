@@ -118,11 +118,17 @@ module pong
 	wire ball_right;
 	wire [7:0] paddle_y;
 	
-	// AI control wires
-	reg ai_enable;
-	wire ai_up;
-	wire ai_down;
-	wire ai_toggle;
+	// Right AI control wires
+	reg right_ai_en;
+	wire right_ai_up;
+	wire right_ai_down;
+	wire right_ai_tog;
+	
+	// Left AI wires
+	reg left_ai_en;
+	wire left_ai_up;
+	wire left_ai_down;
+	wire left_ai_tog;
 	
 	// Score logic wires
 	wire gameover;
@@ -138,26 +144,36 @@ module pong
 		.up(keyboard_up),
 		.down(keyboard_down),
 		.w(keyboard_w),
+		.a(left_ai_tog),
 		.s(keyboard_s),
-		.space(ai_toggle),
+		.left(right_ai_tog),
 		.enter(keyboard_enter));
 		
-	// Spacebar toggles if ai is enabled or not
-	always @(posedge ai_toggle, negedge resetn) begin
+	// Key A toggles if ai is enabled or not
+	always @(posedge left_ai_tog, negedge resetn) begin
 		if(!resetn)
-			ai_enable = 0;
+			left_ai_en = 0;
 		else 
-			ai_enable = !ai_enable;
+			left_ai_en = !left_ai_en;
+	end
+		
+	// Spacebar toggles if ai is enabled or not
+	always @(posedge right_ai_tog, negedge resetn) begin
+		if(!resetn)
+			right_ai_en = 0;
+		else 
+			right_ai_en = !right_ai_en;
 	end
 	
     // Instantiate datapath
 	datapath d0(
 		.clk(CLOCK_50), 
 		.resetn(resetn), 
-		.move_left_up(keyboard_w),
-		.move_left_down(keyboard_s),
-		.move_right_up((!ai_enable & keyboard_up) | (ai_enable & ai_up)), // Mux to choose ai or keyboard input
-		.move_right_down((!ai_enable & keyboard_down) | (ai_enable & ai_down)), // Mux to choose ai or keyboard input
+		// Move depending on key presses or AI
+		.move_left_up(!left_ai_en & keyboard_w) | (left_ai_en & left_ai_up),
+		.move_left_down(!left_ai_en & keyboard_s) | (left_ai_en & left_ai_down),
+		.move_right_up((!right_ai_en & keyboard_up) | (right_ai_en & right_ai_up)),
+		.move_right_down((!right_ai_en & keyboard_down) | (right_ai_en & right_ai_down)),
 		.set_up_clear_screen(control_set_up_clear_screen),
 		.clear_screen(control_clear_screen),
 		.move_pads(control_move_pads),
@@ -207,7 +223,7 @@ module pong
 		.plot(writeEn),
 		.state_out(LEDR[3:0]));
 	
-	// Instantiate the AI logic
+	// Instantiate the right AI logic
 	ai_player ai(
 		.clk(CLOCK_50),
 		.resetn(resetn),
@@ -218,8 +234,23 @@ module pong
 		.ball_down(ball_down),
 		.ball_right(ball_right),
 		.paddle_y(paddle_y),
-		.ai_up(ai_up),
-		.ai_down(ai_down)
+		.ai_up(right_ai_up),
+		.ai_down(right_ai_down)
+		);
+		
+	// Instantiate the left AI logic
+	ai_player ai(
+		.clk(CLOCK_50),
+		.resetn(resetn),
+		.ball_x(ball_x),
+		.ball_y(ball_y),
+		.speed_x(speed_x),
+		.speed_y(speed_y),
+		.ball_down(ball_down),
+		.ball_right(ball_right),
+		.paddle_y(paddle_y),
+		.ai_up(left_ai_up),
+		.ai_down(left_ai_down)
 		);
 		
 	hex_decoder H0(
